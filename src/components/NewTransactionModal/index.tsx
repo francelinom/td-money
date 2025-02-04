@@ -5,6 +5,9 @@ import { CloseButton, Content, Overlay, TransactionType, TransactionTypeButton }
 import * as z from 'zod'
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { api } from '../../lib/axios';
+import { useContext } from 'react';
+import { TransactionContext } from '../../contexts/TransactionsContext';
 
 const newTransactionFormSchema = z.object({
     description: z.string(),
@@ -16,10 +19,12 @@ const newTransactionFormSchema = z.object({
 type NewTransactionFormInputs = z.infer<typeof newTransactionFormSchema>
 
 export function NewTransactionModal() {
+    const { createTransaction } = useContext(TransactionContext)
     const {
         control,
         register,
         handleSubmit,
+        reset,
         formState: { isSubmitting }
     } = useForm<NewTransactionFormInputs>({
         resolver: zodResolver(newTransactionFormSchema),
@@ -28,18 +33,30 @@ export function NewTransactionModal() {
         }
     })
 
-    function handleCreateNewTransaction(data: NewTransactionFormInputs) {
+    async function handleCreateNewTransaction(data: NewTransactionFormInputs) {
+        const { description, price, category, type } = data
 
+        await createTransaction({
+            description,
+            price,
+            category,
+            type
+        })
+
+        reset()
     }
 
     return (
         <Dialog.Portal>
             <Overlay />
+
             <Content>
                 <Dialog.Title>Nova Transação</Dialog.Title>
+
                 <CloseButton>
                     <X size={24} />
                 </CloseButton>
+
                 <form onSubmit={handleSubmit(handleCreateNewTransaction)}>
                     <input
                         type="text"
@@ -51,7 +68,7 @@ export function NewTransactionModal() {
                         type="number"
                         placeholder="Preço"
                         required
-                        {...register('price')}
+                        {...register('price', { valueAsNumber: true })}
                     />
                     <input
                         type="text"
@@ -62,10 +79,13 @@ export function NewTransactionModal() {
 
                     <Controller
                         control={control}
-                        name='type'
+                        name="type"
                         render={({ field }) => {
                             return (
-                                <TransactionType onValueChange={field.onChange} value={field.value}>
+                                <TransactionType
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                >
                                     <TransactionTypeButton variant="income" value="income">
                                         <ArrowCircleUp size={24} />
                                         Entrada
@@ -77,7 +97,6 @@ export function NewTransactionModal() {
                                 </TransactionType>
                             )
                         }}
-
                     />
 
                     <button type="submit" disabled={isSubmitting}>
